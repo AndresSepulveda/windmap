@@ -3,6 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation, writers
 from matplotlib.collections import LineCollection
+import cartopy.crs as ccrs
+
+from netCDF4 import Dataset
 
 class Streamlines(object):
     """
@@ -170,8 +173,39 @@ class Streamlines(object):
 
 
 
-Y, X = np.mgrid[-3:3:100j, -3:3:100j]
-U, V = -1 - X**2 + Y, 1 + X - X*Y**2
+# Ruta del archivo de salida de CROCO y GRD (formato netCDF)
+# U y V deben tener la misma dimension 
+ruta_archivo = 'C:/Users/sebai/carpeta_compartida/mag_paraview_10t.nc'
+#ruta_grd = 'C:/Users/sebai/carpeta_compartida/mag_grd.nc'
+
+# Abre el archivo netCDF en modo de lectura
+data_archivo = Dataset(ruta_archivo, 'r')
+#data_grd = Dataset(ruta_grd, 'r')
+
+# Lee la variable 'x' 'y' 'u' y 'v'
+
+Ut = data_archivo.variables['u'][:]
+Vt = data_archivo.variables['v'][:]
+U = np.squeeze(Ut[1,41,3:516:9,3:813:9])
+V = np.squeeze(Vt[1,41,3:516:9,3:813:9])
+
+#X = data_grd.variables['lon_rho'][:]
+#Y = data_grd.variables['lat_rho'][:]
+#X = X[3:516:9,3:813:9]
+#Y = Y[3:516:9,3:813:9]
+
+#U = np.squeeze(Ut[1,41,:,:])
+#V = np.squeeze(Vt[1,41,:,:])
+
+# Crea una máscara booleana para identificar valores que son menores al umbral
+mascara = np.abs(U) < 1.847175e-05
+
+# Reemplaza los valores que cumplen la condición con NaN
+U[mascara] = np.nan
+V[mascara] = np.nan
+
+Y, X = np.mgrid[-3:3:57j, -3:3:90j] # Por el momento no he podido plotear en las lat y lon
+#U, V = -1 - X**2 + Y, 1 + X - X*Y**2
 speed = np.sqrt(U*U + V*V)
 
 fig = plt.figure(figsize=(4,4))
@@ -221,7 +255,7 @@ n = 27
 animation = FuncAnimation(fig, update, frames=n, interval=20)
 pbar = tqdm.tqdm(total=n)
 # animation.save('wind.mp4', writer='ffmpeg', fps=60)
-animation.save('wind.gif', writer='imagemagick', fps=30)
+animation.save('wind_mag.gif', writer='imagemagick', fps=30)
 pbar.close()
 plt.show()
 
